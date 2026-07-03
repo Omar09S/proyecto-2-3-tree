@@ -1,3 +1,4 @@
+// Entregable 4: API REST que expone el árbol al frontend Vue en web/.
 package main
 
 import (

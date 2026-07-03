@@ -1,3 +1,4 @@
+// Package tree23 implementa un Árbol 2-3 genérico.
 package tree23
 
 import (
@@ -5,6 +6,9 @@ import (
 	"fmt"
 )
 
+// numKeys=1 es un 2-nodo, numKeys=2 es un 3-nodo. Los arreglos tienen
+// espacio de sobra porque una hoja puede quedar transitoriamente con
+// 3 claves antes de dividirse en split().
 type Node[K cmp.Ordered] struct {
 	keys     [3]K
 	children [4]*Node[K]
@@ -136,6 +140,8 @@ func (t *Tree23[K]) insertIntoLeaf(node *Node[K], key K, inserted *bool) *Node[K
 	return node
 }
 
+// split parte el hijo desbordado (3 claves) de node en dos, subiendo la
+// clave del medio a node.
 func (t *Tree23[K]) split(node *Node[K]) *Node[K] {
 	var overflow int
 	for i := 0; i < 4; i++ {
@@ -271,6 +277,9 @@ func (t *Tree23[K]) removeFromLeaf(node *Node[K], key K) bool {
 	return false
 }
 
+// fix repara a children[idx] cuando queda con 0 claves: primero intenta
+// redistribuir tomando una clave de un hermano, y si ninguno puede prestar,
+// fusiona (merge).
 func (t *Tree23[K]) fix(father *Node[K], idx int) *Node[K] {
 	if idx < father.numKeys && father.children[idx+1] != nil && father.children[idx+1].numKeys == 2 {
 		t.redistribute(father, idx)
@@ -385,6 +394,8 @@ func inOrder[K cmp.Ordered](node *Node[K], out *[]K) {
 	}
 }
 
+// RangeQuery devuelve las claves en [lo, hi] podando las ramas que quedan
+// completamente fuera del rango, en O(log n + m).
 func (t *Tree23[K]) RangeQuery(lo, hi K) []K {
 	result := make([]K, 0)
 	if lo > hi {

@@ -1,3 +1,5 @@
+// Entregable 3: carga ciudades desde CSV a SQLite, arma un Árbol 2-3 con los
+// nombres y resuelve las consultas (búsqueda, rango, listado) sobre el árbol.
 package main
 
 import (
