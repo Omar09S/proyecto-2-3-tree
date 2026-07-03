@@ -1,5 +1,3 @@
-// API REST del simulador (Entregable 4). Sirve el frontend Vue en / y
-// expone los endpoints /api/tree, insert, delete, search, range, reset, load.
 package main
 
 import (

@@ -1,5 +1,3 @@
-// App con SQLite (Entregable 3). Carga las ciudades del CSV en la BD,
-// construye un Árbol 2-3 con los nombres y hace las consultas sobre el árbol.
 package main
 
 import (
@@ -19,7 +17,6 @@ const (
 	dbPath  = "data/ciudades.db"
 )
 
-// Ciudad representa una fila del dataset.
 type Ciudad struct {
 	Nombre    string
 	Poblacion int

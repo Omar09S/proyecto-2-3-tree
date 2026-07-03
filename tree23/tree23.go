@@ -1,4 +1,3 @@
-// Package tree23 implementa un Árbol 2-3 genérico.
 package tree23
 
 import (
@@ -6,9 +5,6 @@ import (
 	"fmt"
 )
 
-// Node representa un 2-nodo (numKeys=1) o un 3-nodo (numKeys=2).
-// Los arreglos tienen tamaño 3 y 4 porque durante un insert un nodo puede
-// quedar momentáneamente con 3 claves antes de dividirse.
 type Node[K cmp.Ordered] struct {
 	keys     [3]K
 	children [4]*Node[K]
@@ -90,7 +86,6 @@ func (t *Tree23[K]) insert(node *Node[K], key K, inserted *bool) *Node[K] {
 		return t.insertIntoLeaf(node, key, inserted)
 	}
 
-	// La clave también puede coincidir con un separador de un nodo interno.
 	if key == node.keys[0] || (node.numKeys == 2 && key == node.keys[1]) {
 		return node
 	}
@@ -141,8 +136,6 @@ func (t *Tree23[K]) insertIntoLeaf(node *Node[K], key K, inserted *bool) *Node[K
 	return node
 }
 
-// split divide el hijo desbordado (3 claves) de node: la clave del medio
-// sube a node y el hijo se parte en dos.
 func (t *Tree23[K]) split(node *Node[K]) *Node[K] {
 	var overflow int
 	for i := 0; i < 4; i++ {
@@ -222,7 +215,6 @@ func (t *Tree23[K]) delete(node *Node[K], key K, removed *bool) *Node[K] {
 		return node
 	}
 
-	// La clave está en un nodo interno: se reemplaza por su predecesor.
 	if key == node.keys[0] {
 		*removed = true
 		pred := maxKey(node.children[0])
@@ -279,8 +271,6 @@ func (t *Tree23[K]) removeFromLeaf(node *Node[K], key K) bool {
 	return false
 }
 
-// fix repara children[idx] cuando queda con 0 claves: redistribuye desde un
-// hermano con 2 claves o, si no hay, fusiona.
 func (t *Tree23[K]) fix(father *Node[K], idx int) *Node[K] {
 	if idx < father.numKeys && father.children[idx+1] != nil && father.children[idx+1].numKeys == 2 {
 		t.redistribute(father, idx)
@@ -395,8 +385,6 @@ func inOrder[K cmp.Ordered](node *Node[K], out *[]K) {
 	}
 }
 
-// RangeQuery devuelve, en orden ascendente, las claves k con lo <= k <= hi.
-// Poda las ramas que quedan fuera del rango.
 func (t *Tree23[K]) RangeQuery(lo, hi K) []K {
 	result := make([]K, 0)
 	if lo > hi {
@@ -445,7 +433,6 @@ func rangeQuery[K cmp.Ordered](node *Node[K], lo, hi K, out *[]K) {
 	}
 }
 
-// NodeSnapshot es una copia serializable de un nodo, usada por el frontend.
 type NodeSnapshot[K cmp.Ordered] struct {
 	Keys     []K                `json:"keys"`
 	NumKeys  int                `json:"numKeys"`
@@ -454,7 +441,6 @@ type NodeSnapshot[K cmp.Ordered] struct {
 	State    string             `json:"state"`
 }
 
-// Step representa un instante del algoritmo para la animación paso a paso.
 type Step[K cmp.Ordered] struct {
 	Phase string           `json:"phase"`
 	Msg   string           `json:"msg"`
