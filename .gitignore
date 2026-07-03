@@ -1,0 +1,4 @@
+.claude/
+*.exe
+SELECT
+data/*.db

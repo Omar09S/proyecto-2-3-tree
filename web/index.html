@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2-3 Tree Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --surface-alt: #f8fafc;
+      --border:      #e2e8f0;
+      --border-input:#cbd5e1;
+      --text-1:      #0f172a;
+      --text-2:      #475569;
+      --text-3:      #94a3b8;
+      --accent:      #4f46e5;
+      --accent-bg:   #eef2ff;
+      --accent-dim:  #4338ca;
+      --success:     #16a34a;
+      --success-bg:  #f0fdf4;
+      --danger:      #dc2626;
+      --danger-bg:   #fef2f2;
+      --warning:     #d97706;
+      --warning-bg:  #fffbeb;
+      --purple:      #7c3aed;
+      --purple-bg:   #f5f3ff;
+      --shadow-xs:   0 1px 2px rgba(0,0,0,0.05);
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:   0 4px 16px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.03);
+      --radius:      12px;
+      --radius-sm:   8px;
+      --sidebar:     252px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+      background: var(--surface);
+      box-shadow: var(--shadow-xs);
+      z-index: 10;
+    }
+
+    .logo {
+      width: 26px; height: 26px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 1px 4px rgba(79,70,229,0.3);
+    }
+    .logo svg { width: 14px; height: 14px; }
+
+    .header-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-1);
+      letter-spacing: -0.02em;
+    }
+
+    .header-sep {
+      width: 1px; height: 14px;
+      background: var(--border);
+      margin: 0 2px;
+    }
+
+    .header-sub {
+      font-size: 12px;
+      color: var(--text-3);
+      font-weight: 400;
+    }
+
+    .pill {
+      margin-left: auto;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border: 1px solid rgba(79,70,229,0.2);
+      border-radius: 9999px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar);
+      flex-shrink: 0;
+      background: var(--surface-alt);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 14px 12px;
+      gap: 4px;
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 14px 8px 6px;
+    }
+    .sidebar-label:first-child { padding-top: 4px; }
+
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      box-shadow: var(--shadow-xs);
+      transition: box-shadow 0.15s;
+    }
+    .tool-card:focus-within {
+      box-shadow: var(--shadow-sm);
+      border-color: var(--border-input);
+    }
+
+    .tool-card input[type=text] {
+      width: 100%;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 10px;
+      color: var(--text-1);
+      font-size: 12.5px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .tool-card input[type=text]::placeholder { color: var(--text-3); }
+    .tool-card input[type=text]:focus {
+      background: var(--surface);
+      border-color: rgba(79,70,229,0.5);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.08);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 6.5px 12px;
+      border-radius: 7px;
+      border: none;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: -0.01em;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(79,70,229,0.25);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-dim);
+      box-shadow: 0 2px 6px rgba(79,70,229,0.3);
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-xs);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--surface-alt);
+      color: var(--text-1);
+      border-color: var(--border-input);
+    }
+
+    .btn-danger {
+      background: var(--surface);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+      box-shadow: var(--shadow-xs);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-bg);
+      border-color: #fca5a5;
+    }
+
+    .result-chip {
+      padding: 6px 10px;
+      border-radius: 7px;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+    .result-chip.ok   { background: var(--success-bg); color: #15803d; border: 1px solid #bbf7d0; }
+    .result-chip.err  { background: var(--danger-bg);  color: #b91c1c; border: 1px solid #fecaca; }
+    .result-chip.info { background: var(--accent-bg);  color: #4338ca; border: 1px solid #c7d2fe; }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0;
+    }
+
+    /* ── Main panel ─────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      background: var(--bg);
+    }
+
+    .tree-area {
+      flex: 1;
+      overflow: auto;
+      padding: 28px;
+    }
+
+    /* White canvas — the diagram workspace */
+    .canvas {
+      display: inline-block;     /* shrink-wraps to the SVG size */
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      padding: 36px 40px;
+      min-width: 680px;
+      min-height: 300px;
+      vertical-align: top;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-3);
+      padding: 40px 0;
+    }
+    .empty-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+    }
+    .empty-state p { font-size: 13px; color: var(--text-2); }
+    .empty-state .hint { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+
+    svg.tree { display: block; overflow: visible; }
+
+    /* ── Step Player ─────────────────────────────────── */
+    .step-player {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .step-player-left { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+    .step-phase-badge {
+      flex-shrink: 0;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .phase-descend,.phase-duplicate { background:var(--accent-bg); color:var(--accent); border:1px solid rgba(79,70,229,0.2); }
+    .phase-found,.phase-insert,.phase-complete { background:var(--success-bg); color:var(--success); border:1px solid #bbf7d0; }
+    .phase-not_found { background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; }
+    .phase-split,.phase-grow,.phase-successor { background:var(--warning-bg); color:var(--warning); border:1px solid #fde68a; }
+    .phase-merge { background:var(--purple-bg); color:var(--purple); border:1px solid #ddd6fe; }
+    .step-msg { font-size:12.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .step-case-badge { flex-shrink:0; font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-bg); border:1px solid #c7d2fe; padding:2px 9px; border-radius:99px; white-space:nowrap; }
+    .step-controls { display:flex; gap:4px; flex-shrink:0; }
+    .step-btn {
+      width:28px; height:28px; border-radius:7px;
+      border:1px solid var(--border); background:var(--surface-alt);
+      color:var(--text-2); font-size:14px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all 0.15s; font-family:inherit;
+      box-shadow: var(--shadow-xs);
+    }
+    .step-btn:hover:not(:disabled) { background:var(--surface); color:var(--text-1); border-color:var(--border-input); }
+    .step-btn:disabled { opacity:0.35; cursor:not-allowed; }
+    .step-btn-play { width:32px; background:var(--accent-bg); border-color:rgba(79,70,229,0.25); color:var(--accent); }
+    .step-btn-play:hover:not(:disabled) { background:#e0e7ff !important; }
+    .step-counter { font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums; flex-shrink:0; }
+    .step-progress-track { width:80px; height:3px; background:var(--border); border-radius:99px; overflow:hidden; flex-shrink:0; }
+    .step-progress-fill  { height:100%; background:var(--accent); border-radius:99px; transition:width 0.2s; }
+
+    /* ── Log bar ─────────────────────────────────────── */
+    .log-bar {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      max-height: 140px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      padding: 7px 16px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .log-header span {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .log-header button {
+      margin-left: auto;
+      background: none; border: none;
+      color: var(--text-3); cursor: pointer;
+      font-size: 11px; font-family: inherit;
+      padding: 2px 6px; border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .log-header button:hover { color: var(--text-2); }
+
+    .log-entries {
+      overflow-y: auto;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .log-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      transition: background 0.1s;
+    }
+    .log-row:hover { background: var(--surface-alt); }
+
+    .log-time { color: var(--text-3); flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 11px; }
+    .log-dot  { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-bottom: 1px; }
+    .log-msg  { color: var(--text-2); }
+
+    .log-row.ok   .log-dot { background: var(--success); }
+    .log-row.ok   .log-msg { color: #15803d; }
+    .log-row.err  .log-dot { background: var(--danger); }
+    .log-row.err  .log-msg { color: #b91c1c; }
+    .log-row.info .log-dot { background: var(--accent); }
+    .log-row.info .log-msg { color: #4338ca; }
+
+    /* ── SVG node styles ─────────────────────────────── */
+    .n-base    { transition: fill 0.25s, stroke 0.25s, opacity 0.25s; }
+    .n-normal  { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1.5;
+                 filter: drop-shadow(0 1px 3px rgba(0,0,0,0.07)); }
+    .n-range   { fill: #eef2ff; stroke: #4f46e5; stroke-width: 1.5; }
+    .n-active  { fill: #eef2ff; stroke: #4f46e5; stroke-width: 2;
+                 filter: drop-shadow(0 0 8px rgba(79,70,229,0.2)); }
+    .n-visited { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1; opacity: 0.55; }
+    .n-found   { fill: #f0fdf4; stroke: #16a34a; stroke-width: 2;
+                 filter: drop-shadow(0 0 8px rgba(22,163,74,0.18)); }
+    .n-new     { fill: #f0fdf4; stroke: #16a34a; stroke-width: 2;
+                 filter: drop-shadow(0 0 8px rgba(22,163,74,0.18)); }
+    .n-split   { fill: #fffbeb; stroke: #d97706; stroke-width: 2;
+                 filter: drop-shadow(0 0 8px rgba(217,119,6,0.18)); }
+    .n-merge   { fill: #f5f3ff; stroke: #7c3aed; stroke-width: 2;
+                 filter: drop-shadow(0 0 8px rgba(124,58,237,0.18)); }
+    .n-text {
+      fill: #0f172a;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 11.5px;
+      font-weight: 500;
+      dominant-baseline: middle;
+      text-anchor: middle;
+      pointer-events: none;
+      letter-spacing: -0.01em;
+    }
+    .n-text-dim { fill: var(--text-3); }
+    .e-normal  { stroke: #cbd5e1; stroke-width: 1.5; fill: none; }
+    .e-active  { stroke: #4f46e5; stroke-width: 2;   fill: none; opacity: 0.55; }
+    .e-found   { stroke: #16a34a; stroke-width: 2;   fill: none; opacity: 0.55; }
+    .e-visited { stroke: #e2e8f0; stroke-width: 1;   fill: none; }
+    .n-divider      { stroke: #e2e8f0; stroke-width: 1.5; }
+    .n-divider-hl   { stroke: rgba(79,70,229,0.35);  stroke-width: 1.5; }
+    .n-divider-found { stroke: rgba(22,163,74,0.35); stroke-width: 1.5; }
+
+    /* ── Scrollbar ───────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ── Spinner ─────────────────────────────────────── */
+    .spin {
+      display: inline-block; width: 12px; height: 12px;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app" style="display:contents">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="3" r="2" fill="white"/>
+        <circle cx="3" cy="12" r="2" fill="white" opacity=".75"/>
+        <circle cx="13" cy="12" r="2" fill="white" opacity=".75"/>
+        <line x1="8" y1="5" x2="3" y2="10" stroke="white" stroke-width="1.2" opacity=".6"/>
+        <line x1="8" y1="5" x2="13" y2="10" stroke="white" stroke-width="1.2" opacity=".6"/>
+      </svg>
+    </div>
+    <span class="header-title">2-3 Tree</span>
+    <div class="header-sep"></div>
+    <span class="header-sub">Visualización interactiva</span>
+    <span class="pill">{{ treeSize }} nodos</span>
+  </header>
+
+  <div class="workspace">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <p class="sidebar-label">Buscar</p>
+      <div class="tool-card">
+        <input v-model="searchKey" type="number" placeholder="Ej: 42" @keyup.enter="doSearch" />
+        <button class="btn btn-primary" @click="doSearch" :disabled="loading">
+          <span v-if="loading" class="spin"></span>
+          <span v-else>Buscar</span>
+        </button>
+        <div v-if="searchResult" :class="['result-chip', searchResult.found ? 'ok' : 'err']">
+          <b>{{ searchResult.found ? 'Encontrado' : 'No encontrado' }}</b>
+          — {{ searchResult.key }}
+          <span v-if="searchResult.found" style="display:block;font-size:11px;margin-top:2px;opacity:0.75">Camino resaltado en el árbol</span>
+        </div>
+      </div>
+
+      <p class="sidebar-label">Insertar</p>
+      <div class="tool-card">
+        <input v-model="insertKey" type="number" placeholder="Ej: 17" @keyup.enter="doInsert" />
+        <button class="btn btn-primary" @click="doInsert" :disabled="loading">Insertar</button>
+        <div v-if="insertResult" :class="['result-chip', insertResult.inserted ? 'ok' : 'info']">
+          <span v-if="insertResult.inserted">
+            Insertado — {{ insertResult.key }}
+            <span v-if="insertResult.grew" style="display:block;font-size:11px;margin-top:2px;opacity:0.8">Árbol creció un nivel (split en raíz)</span>
+          </span>
+          <span v-else>{{ insertResult.key }} ya existe</span>
+        </div>
+      </div>
+
+      <p class="sidebar-label">Rango numérico</p>
+      <div class="tool-card">
+        <input v-model="rangeLo" type="number" placeholder="Desde (ej: 10)" />
+        <input v-model="rangeHi" type="number" placeholder="Hasta (ej: 50)" />
+        <button class="btn btn-primary" @click="doRange" :disabled="loading">Consultar rango</button>
+        <div v-if="rangeResult" class="result-chip info">
+          <b>{{ rangeResult.count }} resultado(s)</b>
+          <span v-if="rangeResult.count > 0" style="display:block;margin-top:4px;line-height:1.7;opacity:0.85">
+            {{ rangeResult.results.join(' · ') }}
+          </span>
+        </div>
+      </div>
+
+      <p class="sidebar-label">Eliminar</p>
+      <div class="tool-card">
+        <input v-model="deleteKey" type="number" placeholder="Ej: 30" @keyup.enter="doDelete" />
+        <button class="btn btn-danger" @click="doDelete" :disabled="loading">Eliminar</button>
+        <div v-if="deleteResult" :class="['result-chip', deleteResult.deleted ? 'ok' : 'err']">
+          <span v-if="deleteResult.deleted">Eliminado — {{ deleteResult.key }}</span>
+          <span v-else>{{ deleteResult.key }} no existe</span>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <p class="sidebar-label">Dataset</p>
+      <div class="tool-card" style="gap:6px">
+        <button class="btn btn-ghost" @click="doLoad" :disabled="loading">Generar 20 números aleatorios</button>
+        <button class="btn btn-danger" @click="doReset" :disabled="loading">Vaciar árbol</button>
+      </div>
+
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Tree viewport -->
+      <div class="tree-area">
+        <div class="canvas">
+          <div v-if="!currentTree" class="empty-state">
+            <div class="empty-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
+                <line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/>
+              </svg>
+            </div>
+            <p>El árbol está vacío</p>
+            <p class="hint">Inserta un número o genera el dataset aleatorio</p>
+          </div>
+
+          <svg v-if="currentTree" class="tree"
+               :width="layout.svgW"
+               :height="layout.svgH"
+               :viewBox="`0 0 ${layout.svgW} ${layout.svgH}`"
+               xmlns="http://www.w3.org/2000/svg">
+
+            <!-- Edges -->
+            <line v-for="(e, i) in layout.edges" :key="'e'+i"
+                  :x1="e.x1" :y1="e.y1" :x2="e.x2" :y2="e.y2"
+                  :class="getEdgeClass(e)" />
+
+            <!-- Nodes -->
+            <g v-for="(n, i) in layout.nodes" :key="'n'+i">
+              <rect
+                :x="n.cx - n.w/2" :y="n.cy - 18"
+                :width="n.w" height="36" rx="8"
+                :class="['n-base', getNodeClass(n)]" />
+
+              <!-- Divider between keys in 3-node -->
+              <line v-if="n.numKeys === 2"
+                    :x1="n.cx" :y1="n.cy - 12"
+                    :x2="n.cx" :y2="n.cy + 12"
+                    :class="n.state === 'found' || n.state === 'new' ? 'n-divider-found' : n.state === 'active' ? 'n-divider-hl' : 'n-divider'" />
+
+              <!-- Key labels -->
+              <text :x="n.numKeys === 2 ? n.cx - n.w/4 : n.cx" :y="n.cy" class="n-text">
+                {{ n.keys[0] }}
+              </text>
+              <text v-if="n.numKeys === 2" :x="n.cx + n.w/4" :y="n.cy" class="n-text">
+                {{ n.keys[1] }}
+              </text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Step player -->
+      <div v-if="steps.length > 0" class="step-player">
+        <div class="step-player-left">
+          <span class="step-phase-badge" :class="'phase-' + (currentStep ? currentStep.phase : 'descend')">
+            {{ phaseLabel(currentStep ? currentStep.phase : '') }}
+          </span>
+          <span class="step-msg">{{ currentStep ? currentStep.msg : '' }}</span>
+          <span v-if="currentStep && currentStep.case" class="step-case-badge">{{ currentStep.case }}</span>
+        </div>
+        <div class="step-controls">
+          <button class="step-btn" @click="prevStep" :disabled="stepIdx === 0">‹</button>
+          <button class="step-btn step-btn-play" @click="playing ? stopAnimation() : resumeAnimation()">
+            <span v-if="playing">⏸</span><span v-else>▶</span>
+          </button>
+          <button class="step-btn" @click="nextStep" :disabled="stepIdx >= steps.length - 1">›</button>
+        </div>
+        <span class="step-counter">{{ stepIdx + 1 }}/{{ steps.length }}</span>
+        <div class="step-progress-track">
+          <div class="step-progress-fill" :style="{width: ((stepIdx+1)/steps.length*100)+'%'}"></div>
+        </div>
+      </div>
+
+      <!-- Log bar -->
+      <div class="log-bar">
+        <div class="log-header">
+          <span>Activity log</span>
+          <button @click="log=[]">Clear</button>
+        </div>
+        <div class="log-entries">
+          <div v-if="log.length === 0" style="padding:6px 8px;color:var(--text-3);font-size:11.5px">
+            No hay eventos aún.
+          </div>
+          <div v-for="(entry, i) in log" :key="i" :class="['log-row', entry.type]">
+            <span class="log-time">{{ entry.time }}</span>
+            <span class="log-dot"></span>
+            <span class="log-msg">{{ entry.msg }}</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+const API = 'http://localhost:8080/api';
+const NODE_H  = 36;
+const LEVEL_GAP = 88;
+const CHAR_W    = 7;
+const NODE_PAD  = 20;
+const LEAF_GAP  = 18;
+
+function nodeWidth(node) {
+  if (!node) return 80;
+  const maxLen = node.keys.reduce((m, k) => Math.max(m, String(k).length), 0);
+  const base = maxLen * CHAR_W + NODE_PAD * 2;
+  return node.numKeys === 2 ? base * 2 + 12 : base;
+}
+
+function subtreeWidth(node) {
+  if (!node) return nodeWidth(null) + LEAF_GAP;
+  if (node.isLeaf) return nodeWidth(node) + LEAF_GAP;
+  const childCount = node.numKeys + 1;
+  let total = 0;
+  for (let i = 0; i < childCount; i++) total += subtreeWidth(node.children[i]);
+  return Math.max(total, nodeWidth(node) + LEAF_GAP);
+}
+
+function buildLayout(node, x, y, width, nodes, edges, parent, childIdx, rangeSet) {
+  if (!node) return;
+  const cx = x + width / 2;
+  const cy = y;
+  const w  = nodeWidth(node);
+  const rangeHit = rangeSet && node.keys && node.keys.some(k => rangeSet.has(k));
+
+  nodes.push({ ...node, cx, cy, w, rangeHit });
+
+  if (parent !== null) {
+    // Origen en el padre: borde izquierdo, separador o borde derecho según posición del hijo.
+    // 3-nodo: hijo 0 → borde izq, hijo 1 → separador central, hijo 2 → borde der.
+    // 2-nodo: hijo 0 → cuarto izq, hijo 1 → cuarto der (abanico suave).
+    let x1 = parent.cx;
+    if (parent.numKeys === 2) {
+      if (childIdx === 0)      x1 = parent.cx - parent.w / 2 + 10;
+      else if (childIdx === 2) x1 = parent.cx + parent.w / 2 - 10;
+      // childIdx === 1 → x1 = parent.cx (separador)
+    } else {
+      if (childIdx === 0) x1 = parent.cx - parent.w / 4;
+      else                x1 = parent.cx + parent.w / 4;
+    }
+    // Destino en el hijo: se corresponde simétricamente.
+    let x2 = cx;
+    edges.push({
+      x1, y1: parent.cy + NODE_H / 2,
+      x2, y2: cy - NODE_H / 2,
+      state: node.state || '',
+    });
+  }
+
+  if (!node.isLeaf) {
+    const childCount  = node.numKeys + 1;
+    const childWidths = Array.from({ length: childCount }, (_, i) => subtreeWidth(node.children[i]));
+    const totalChildW = childWidths.reduce((a, b) => a + b, 0);
+    let childX = x + (width - totalChildW) / 2;
+    for (let i = 0; i < childCount; i++) {
+      if (node.children[i]) {
+        buildLayout(node.children[i], childX, cy + LEVEL_GAP, childWidths[i],
+                    nodes, edges, { cx, cy, w, numKeys: node.numKeys }, i, rangeSet);
+      }
+      childX += childWidths[i];
+    }
+  }
+}
+
+createApp({
+  data() {
+    return {
+      tree: null, treeSize: 0, loading: false,
+      searchKey: '', searchResult: null,
+      insertKey: '', insertResult: null,
+      deleteKey: '', deleteResult: null,
+      rangeLo: '', rangeHi: '', rangeResult: null, rangeSet: null,
+      log: [],
+      steps: [], stepIdx: 0, playing: false, timer: null,
+    };
+  },
+
+  computed: {
+    currentTree() {
+      if (this.steps.length > 0 && this.steps[this.stepIdx]) {
+        return this.steps[this.stepIdx].tree;
+      }
+      return this.tree;
+    },
+    currentStep() {
+      return this.steps.length > 0 ? this.steps[this.stepIdx] : null;
+    },
+    layout() {
+      const tree = this.currentTree;
+      if (!tree) return { nodes: [], edges: [], svgW: 600, svgH: 200 };
+      const nodes = [], edges = [];
+      const totalW = subtreeWidth(tree);
+      const svgW   = Math.max(totalW + 80, 700);
+      buildLayout(tree, (svgW - totalW) / 2, 40, totalW,
+                  nodes, edges, null, 0, this.steps.length > 0 ? null : this.rangeSet);
+      const maxY = nodes.reduce((m, n) => Math.max(m, n.cy), 0);
+      return { nodes, edges, svgW, svgH: maxY + NODE_H + 48 };
+    },
+  },
+
+  methods: {
+    ts() { return new Date().toLocaleTimeString('es', { hour12: false }); },
+
+    addLog(type, msg) {
+      this.log.unshift({ type, msg, time: this.ts() });
+      if (this.log.length > 80) this.log.pop();
+    },
+
+    async api(path, body) {
+      const opts = body
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        : { method: 'GET' };
+      const res = await fetch(API + path, opts);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    },
+
+    applyTree(data) {
+      this.tree     = data.tree ?? null;
+      this.treeSize = data.size ?? this.treeSize;
+    },
+
+    getNodeClass(n) {
+      if (this.steps.length === 0 && this.rangeSet && n.keys && n.keys.some(k => this.rangeSet.has(k))) return 'n-range';
+      switch (n.state) {
+        case 'active':   return 'n-active';
+        case 'visited':  return 'n-visited';
+        case 'found':    return 'n-found';
+        case 'new':      return 'n-new';
+        case 'split':    return 'n-split';
+        case 'merge':    return 'n-merge';
+        default:
+          if (this.steps.length === 0 && this.rangeSet && n.keys && n.keys.some(k => this.rangeSet.has(k))) return 'n-range';
+          return 'n-normal';
+      }
+    },
+
+    getEdgeClass(e) {
+      if (e.state === 'active')  return 'e-active';
+      if (e.state === 'found' || e.state === 'new') return 'e-found';
+      if (e.state === 'visited') return 'e-visited';
+      return 'e-normal';
+    },
+
+    phaseLabel(phase) {
+      const map = {
+        descend: 'Descenso', found: 'Encontrado', not_found: 'No existe',
+        insert: 'Inserción', split: 'División', grow: 'Árbol crece',
+        successor: 'Sucesor', merge: 'Fusión', duplicate: 'Duplicado',
+        complete: 'Completo',
+      };
+      return map[phase] || phase || '';
+    },
+
+    startAnimation(steps) {
+      this.stopAnimation();
+      this.steps   = steps || [];
+      this.stepIdx = 0;
+      if (this.steps.length === 0) return;
+      this.playing = true;
+      this.timer = setInterval(() => {
+        if (this.stepIdx < this.steps.length - 1) {
+          this.stepIdx++;
+        } else {
+          this.stopAnimation();
+          // aplica el árbol final al estado base
+          const last = this.steps[this.steps.length - 1];
+          if (last) { this.tree = last.tree; }
+        }
+      }, 750);
+    },
+
+    stopAnimation() {
+      this.playing = false;
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    },
+
+    resumeAnimation() {
+      if (this.stepIdx >= this.steps.length - 1) this.stepIdx = 0;
+      this.playing = true;
+      this.timer = setInterval(() => {
+        if (this.stepIdx < this.steps.length - 1) {
+          this.stepIdx++;
+        } else {
+          this.stopAnimation();
+          const last = this.steps[this.steps.length - 1];
+          if (last) { this.tree = last.tree; }
+        }
+      }, 750);
+    },
+
+    nextStep() { this.stopAnimation(); if (this.stepIdx < this.steps.length - 1) this.stepIdx++; },
+    prevStep() { this.stopAnimation(); if (this.stepIdx > 0) this.stepIdx--; },
+
+    async doSearch() {
+      const key = parseInt(this.searchKey); if (isNaN(key)) return;
+      this.loading = true; this.rangeSet = null; this.steps = [];
+      try {
+        const data = await this.api('/search', { key });
+        this.applyTree(data);
+        this.searchResult = { found: data.found, key };
+        this.insertResult = null; this.rangeResult = null;
+        this.addLog(data.found ? 'ok' : 'err',
+          `Search(${key}) → ${data.found ? 'encontrado' : 'no encontrado'}`);
+        this.startAnimation(data.steps);
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async doInsert() {
+      const key = parseInt(this.insertKey); if (isNaN(key)) return;
+      this.loading = true; this.rangeSet = null; this.steps = [];
+      try {
+        const data = await this.api('/insert', { key });
+        this.applyTree(data);
+        this.insertResult = { inserted: data.inserted, grew: data.grew, key };
+        this.searchResult = null; this.rangeResult = null;
+        this.addLog(data.inserted ? 'ok' : 'info',
+          data.inserted
+            ? `Insert(${key})${data.grew ? ' — árbol creció de nivel' : ''}`
+            : `Insert(${key}) — ya existía`);
+        if (data.inserted) this.insertKey = '';
+        this.startAnimation(data.steps);
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async doDelete() {
+      const key = parseInt(this.deleteKey); if (isNaN(key)) return;
+      this.loading = true; this.rangeSet = null; this.steps = [];
+      try {
+        const data = await this.api('/delete', { key });
+        this.applyTree(data);
+        this.deleteResult = { deleted: data.deleted, key };
+        this.searchResult = null; this.insertResult = null; this.rangeResult = null;
+        this.addLog(data.deleted ? 'ok' : 'err',
+          data.deleted ? `Delete(${key}) → eliminado` : `Delete(${key}) → no existe`);
+        if (data.deleted) this.deleteKey = '';
+        this.startAnimation(data.steps);
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async doRange() {
+      const lo = parseInt(this.rangeLo), hi = parseInt(this.rangeHi);
+      if (isNaN(lo) || isNaN(hi)) return;
+      this.loading = true;
+      try {
+        const data = await this.api('/range', { lo, hi });
+        this.applyTree(data);
+        this.rangeResult = { results: data.results || [], count: data.count };
+        this.rangeSet    = new Set(data.results || []);
+        this.searchResult = null; this.insertResult = null;
+        this.addLog('info', `RangeQuery(${lo}, ${hi}) → ${data.count} resultado(s)`);
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async doReset() {
+      this.loading = true; this.rangeSet = null;
+      try {
+        await this.api('/reset', {});
+        this.stopAnimation();
+        this.steps = []; this.stepIdx = 0;
+        this.tree = null; this.treeSize = 0;
+        this.searchResult = null; this.insertResult = null;
+        this.deleteResult = null; this.rangeResult = null;
+        this.addLog('info', 'Árbol vaciado');
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async doLoad() {
+      this.loading = true; this.rangeSet = null;
+      try {
+        const data = await this.api('/load', {});
+        this.applyTree(data);
+        this.searchResult = null; this.insertResult = null; this.rangeResult = null;
+        this.addLog('ok', `Dataset cargado — ${data.loaded} números`);
+      } catch(e) { this.addLog('err', e.message); }
+      finally { this.loading = false; }
+    },
+
+    async fetchTree() {
+      try { const d = await this.api('/tree'); this.applyTree(d); } catch {}
+    },
+  },
+
+  mounted() { this.fetchTree(); },
+}).mount('#app');
+</script>
+</body>
+</html>

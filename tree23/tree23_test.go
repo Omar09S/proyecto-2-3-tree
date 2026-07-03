@@ -327,6 +327,153 @@ func TestRangeQueryMatchesInOrderFilter(t *testing.T) {
 	}
 }
 
+// --- Paso 4: pruebas de Delete ------------------------------------------
+
+func TestDeleteNonExistent(t *testing.T) {
+	tr := New[int]()
+	tr.Insert(5)
+	tr.Delete(99) // no existe, no debe hacer nada
+	if tr.Len() != 1 {
+		t.Fatalf("Len() = %d después de borrar clave inexistente; se esperaba 1", tr.Len())
+	}
+	if !tr.Search(5) {
+		t.Errorf("Search(5) = false tras borrar clave ajena")
+	}
+}
+
+func TestDeleteEmptyTree(t *testing.T) {
+	tr := New[int]()
+	tr.Delete(1) // no debe entrar en pánico
+	if tr.Len() != 0 {
+		t.Fatalf("Len() = %d en árbol vacío", tr.Len())
+	}
+}
+
+func TestDeleteOnlyKey(t *testing.T) {
+	tr := New[int]()
+	tr.Insert(42)
+	tr.Delete(42)
+	if tr.Len() != 0 {
+		t.Fatalf("Len() = %d; se esperaba 0", tr.Len())
+	}
+	if tr.Search(42) {
+		t.Errorf("Search(42) = true después de eliminar la única clave")
+	}
+}
+
+func TestDeleteFrom3NodeLeaf(t *testing.T) {
+	tr := New[int]()
+	tr.Insert(10)
+	tr.Insert(20)
+	tr.Delete(10)
+	if tr.Len() != 1 || !tr.Search(20) || tr.Search(10) {
+		t.Errorf("estado incorrecto tras eliminar clave de hoja 3-nodo")
+	}
+	checkInvariants(t, tr.root)
+}
+
+func TestDeleteCausingMergeAndHeightDecrease(t *testing.T) {
+	// Árbol mínimo que decrece de nivel al borrar:
+	//     [10]
+	//    /    \
+	//  [5]   [15]
+	// Borrar 5 → merge → raíz [10|15] (hoja)
+	tr := New[int]()
+	for _, k := range []int{10, 5, 15} {
+		tr.Insert(k)
+	}
+	tr.Delete(5)
+	if tr.Len() != 2 {
+		t.Fatalf("Len() = %d; se esperaba 2", tr.Len())
+	}
+	if !tr.root.isLeaf() {
+		t.Errorf("la raíz debería ser hoja tras el merge")
+	}
+	checkInvariants(t, tr.root)
+}
+
+func TestDeleteInternalNode(t *testing.T) {
+	// Borrar una clave de un nodo interno (debe reemplazarse por sucesor).
+	tr := New[int]()
+	for _, k := range []int{50, 30, 70, 20, 40, 60, 80} {
+		tr.Insert(k)
+	}
+	tr.Delete(30) // clave interna
+	if tr.Search(30) {
+		t.Errorf("Search(30) = true después de eliminarla")
+	}
+	got := tr.InOrder()
+	want := []int{20, 40, 50, 60, 70, 80}
+	for i, v := range want {
+		if got[i] != v {
+			t.Fatalf("InOrder() = %v; se esperaba %v", got, want)
+		}
+	}
+	checkInvariants(t, tr.root)
+}
+
+func TestDeleteAllKeysOneByOne(t *testing.T) {
+	keys := []int{50, 30, 70, 20, 40, 60, 80, 10, 25, 35, 45, 55, 65, 75, 90}
+	tr := New[int]()
+	for _, k := range keys {
+		tr.Insert(k)
+	}
+	// Eliminamos en un orden diferente al de inserción.
+	deleteOrder := []int{20, 70, 40, 10, 55, 30, 80, 50, 25, 65, 35, 60, 45, 75, 90}
+	remaining := make(map[int]bool)
+	for _, k := range keys {
+		remaining[k] = true
+	}
+	for _, k := range deleteOrder {
+		tr.Delete(k)
+		delete(remaining, k)
+		if tr.Search(k) {
+			t.Errorf("Search(%d) = true inmediatamente después de eliminarlo", k)
+		}
+		if tr.Len() != len(remaining) {
+			t.Fatalf("Len() = %d; se esperaba %d tras borrar %d", tr.Len(), len(remaining), k)
+		}
+		checkInvariants(t, tr.root)
+	}
+	if tr.Len() != 0 {
+		t.Errorf("Len() = %d; se esperaba 0 tras borrar todo", tr.Len())
+	}
+}
+
+func TestDeleteStressRandom(t *testing.T) {
+	tr := New[int]()
+	rng := rand.New(rand.NewSource(99))
+	inserted := make(map[int]bool)
+	for i := 0; i < 500; i++ {
+		k := rng.Intn(300)
+		tr.Insert(k)
+		inserted[k] = true
+	}
+	// Borrar la mitad aleatoriamente.
+	for k := range inserted {
+		if rng.Intn(2) == 0 {
+			tr.Delete(k)
+			delete(inserted, k)
+		}
+	}
+	if tr.Len() != len(inserted) {
+		t.Fatalf("Len() = %d; se esperaba %d", tr.Len(), len(inserted))
+	}
+	for k := range inserted {
+		if !tr.Search(k) {
+			t.Errorf("Search(%d) = false, pero debería existir", k)
+		}
+	}
+	checkInvariants(t, tr.root)
+	// InOrder debe estar ordenado.
+	got := tr.InOrder()
+	for i := 1; i < len(got); i++ {
+		if got[i-1] >= got[i] {
+			t.Fatalf("InOrder no está ordenado en índice %d", i)
+		}
+	}
+}
+
 func TestInsertStringsBalanced(t *testing.T) {
 	tr := New[string]()
 	ciudades := []string{"lima", "quito", "bogota", "santiago", "caracas", "montevideo", "asuncion"}
