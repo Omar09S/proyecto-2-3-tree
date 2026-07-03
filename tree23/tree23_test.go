@@ -6,18 +6,6 @@ import (
 	"testing"
 )
 
-// Pruebas del Paso 1: validan la navegación de Search sobre árboles
-// construidos manualmente, ANTES de implementar la inserción automática.
-// Esto nos permite confiar en que el descenso por el árbol es correcto.
-
-// buildManualTree construye a mano el siguiente árbol 2-3 de altura 2 para
-// probar la búsqueda sin depender todavía de Insert:
-//
-//	             [ 10 | 20 ]            (raíz: 3-nodo)
-//	            /     |     \
-//	      [5]      [15]      [25]       (hojas: 2-nodos)
-//
-// Claves presentes: 5, 10, 15, 20, 25.
 func buildManualTree() *Tree23[int] {
 	left := &Node[int]{numKeys: 1}
 	left.keys[0] = 5
@@ -80,7 +68,6 @@ func TestSearchAbsentKeys(t *testing.T) {
 }
 
 func TestSearchStrings(t *testing.T) {
-	// Verifica que los genéricos funcionan con cmp.Ordered no numérico.
 	root := &Node[string]{numKeys: 2}
 	root.keys[0] = "lima"
 	root.keys[1] = "quito"
@@ -97,14 +84,6 @@ func TestSearchStrings(t *testing.T) {
 	}
 }
 
-// --- Paso 2: pruebas de Insert e InOrder ---------------------------------
-
-// checkInvariants verifica las dos propiedades centrales del árbol 2-3:
-//  1. Orden: dentro de cada nodo keys[0] < keys[1], y cada subárbol respeta
-//     los rangos definidos por las claves del padre.
-//  2. Balance: todas las hojas están exactamente al mismo nivel.
-//
-// Devuelve la altura del subárbol (en niveles) para verificar el balance.
 func checkInvariants[K int | string](t *testing.T, n *Node[K]) int {
 	t.Helper()
 	if n == nil {
@@ -122,7 +101,6 @@ func checkInvariants[K int | string](t *testing.T, n *Node[K]) int {
 		return 1
 	}
 
-	// Un nodo interno debe tener exactamente numKeys+1 hijos no-nil.
 	expectedChildren := n.numKeys + 1
 	heights := make([]int, 0, expectedChildren)
 	for i := 0; i < expectedChildren; i++ {
@@ -131,12 +109,10 @@ func checkInvariants[K int | string](t *testing.T, n *Node[K]) int {
 		}
 		heights = append(heights, checkInvariants(t, n.children[i]))
 	}
-	// Ningún hijo extra debe colgar más allá de expectedChildren.
 	if expectedChildren < 3 && n.children[2] != nil {
 		t.Fatalf("hijo extra inesperado en un 2-nodo")
 	}
 
-	// Todas las alturas de los hijos deben coincidir (árbol balanceado).
 	for _, h := range heights {
 		if h != heights[0] {
 			t.Fatalf("alturas desiguales entre hijos: %v (árbol desbalanceado)", heights)
@@ -197,8 +173,6 @@ func TestInsertDuplicatesIgnored(t *testing.T) {
 }
 
 func TestInsertAscendingAndDescending(t *testing.T) {
-	// Las secuencias ordenadas son el peor caso para árboles no balanceados:
-	// aquí deben seguir produciendo un árbol balanceado.
 	for _, name := range []string{"asc", "desc"} {
 		tr := New[int]()
 		const n = 200
@@ -234,7 +208,6 @@ func TestInsertRandomizedStress(t *testing.T) {
 		present[k] = true
 	}
 
-	// Todas las claves insertadas deben encontrarse; las no insertadas, no.
 	for k := 0; k < 500; k++ {
 		if tr.Search(k) != present[k] {
 			t.Fatalf("Search(%d) = %v; se esperaba %v", k, tr.Search(k), present[k])
@@ -244,7 +217,6 @@ func TestInsertRandomizedStress(t *testing.T) {
 		t.Errorf("Len() = %d; se esperaba %d", tr.Len(), len(present))
 	}
 
-	// InOrder debe estar ordenado y coincidir con el conjunto esperado.
 	want := make([]int, 0, len(present))
 	for k := range present {
 		want = append(want, k)
@@ -272,14 +244,14 @@ func TestRangeQuery(t *testing.T) {
 		lo, hi int
 		want   []int
 	}{
-		{25, 45, []int{25, 30, 35, 40, 45}}, // rango intermedio
-		{0, 100, []int{10, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80}}, // todo
-		{33, 33, []int{}},        // extremos iguales, sin coincidencia
-		{35, 35, []int{35}},      // extremos iguales, con coincidencia
-		{100, 200, []int{}},      // fuera por arriba
-		{-10, 5, []int{}},        // fuera por abajo
-		{45, 25, []int{}},        // lo > hi
-		{41, 59, []int{45, 50}},  // bordes no inclusivos de claves
+		{25, 45, []int{25, 30, 35, 40, 45}},
+		{0, 100, []int{10, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80}},
+		{33, 33, []int{}},
+		{35, 35, []int{35}},
+		{100, 200, []int{}},
+		{-10, 5, []int{}},
+		{45, 25, []int{}},
+		{41, 59, []int{45, 50}},
 	}
 
 	for _, c := range cases {
@@ -296,8 +268,6 @@ func TestRangeQuery(t *testing.T) {
 }
 
 func TestRangeQueryMatchesInOrderFilter(t *testing.T) {
-	// Propiedad: RangeQuery(lo,hi) == InOrder filtrado por [lo,hi], para muchos
-	// rangos aleatorios sobre un árbol grande.
 	tr := New[int]()
 	rng := rand.New(rand.NewSource(7))
 	for i := 0; i < 1000; i++ {
@@ -327,12 +297,10 @@ func TestRangeQueryMatchesInOrderFilter(t *testing.T) {
 	}
 }
 
-// --- Paso 4: pruebas de Delete ------------------------------------------
-
 func TestDeleteNonExistent(t *testing.T) {
 	tr := New[int]()
 	tr.Insert(5)
-	tr.Delete(99) // no existe, no debe hacer nada
+	tr.Delete(99)
 	if tr.Len() != 1 {
 		t.Fatalf("Len() = %d después de borrar clave inexistente; se esperaba 1", tr.Len())
 	}
@@ -343,7 +311,7 @@ func TestDeleteNonExistent(t *testing.T) {
 
 func TestDeleteEmptyTree(t *testing.T) {
 	tr := New[int]()
-	tr.Delete(1) // no debe entrar en pánico
+	tr.Delete(1)
 	if tr.Len() != 0 {
 		t.Fatalf("Len() = %d en árbol vacío", tr.Len())
 	}
@@ -373,11 +341,6 @@ func TestDeleteFrom3NodeLeaf(t *testing.T) {
 }
 
 func TestDeleteCausingMergeAndHeightDecrease(t *testing.T) {
-	// Árbol mínimo que decrece de nivel al borrar:
-	//     [10]
-	//    /    \
-	//  [5]   [15]
-	// Borrar 5 → merge → raíz [10|15] (hoja)
 	tr := New[int]()
 	for _, k := range []int{10, 5, 15} {
 		tr.Insert(k)
@@ -393,12 +356,11 @@ func TestDeleteCausingMergeAndHeightDecrease(t *testing.T) {
 }
 
 func TestDeleteInternalNode(t *testing.T) {
-	// Borrar una clave de un nodo interno (debe reemplazarse por sucesor).
 	tr := New[int]()
 	for _, k := range []int{50, 30, 70, 20, 40, 60, 80} {
 		tr.Insert(k)
 	}
-	tr.Delete(30) // clave interna
+	tr.Delete(30)
 	if tr.Search(30) {
 		t.Errorf("Search(30) = true después de eliminarla")
 	}
@@ -418,7 +380,6 @@ func TestDeleteAllKeysOneByOne(t *testing.T) {
 	for _, k := range keys {
 		tr.Insert(k)
 	}
-	// Eliminamos en un orden diferente al de inserción.
 	deleteOrder := []int{20, 70, 40, 10, 55, 30, 80, 50, 25, 65, 35, 60, 45, 75, 90}
 	remaining := make(map[int]bool)
 	for _, k := range keys {
@@ -449,7 +410,6 @@ func TestDeleteStressRandom(t *testing.T) {
 		tr.Insert(k)
 		inserted[k] = true
 	}
-	// Borrar la mitad aleatoriamente.
 	for k := range inserted {
 		if rng.Intn(2) == 0 {
 			tr.Delete(k)
@@ -465,7 +425,6 @@ func TestDeleteStressRandom(t *testing.T) {
 		}
 	}
 	checkInvariants(t, tr.root)
-	// InOrder debe estar ordenado.
 	got := tr.InOrder()
 	for i := 1; i < len(got); i++ {
 		if got[i-1] >= got[i] {
